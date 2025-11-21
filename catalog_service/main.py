@@ -11,6 +11,8 @@ app = FastAPI(title= "Catalog Service")
 def get_products():
     return products
 
+@app.get("/products/{product_id}", response_model= Product)
+
 @app.post("/products", response_model= Product)
 def create_product(product: Product):
     if any(p.id == product.id for p in products):

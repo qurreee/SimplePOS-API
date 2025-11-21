@@ -1,9 +1,18 @@
 from fastapi import FastAPI,HTTPException
 from typing import List
-from .models import InventoryItem
+from .models import InventoryItem, StockUpdate
 from .data import inventory
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Inventory Service")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],          
+    allow_credentials=True,
+    allow_methods=["*"],    
+    allow_headers=["*"],          
+)
 
 @app.get("/inventory", response_model= List[InventoryItem])
 def get_inventory():
@@ -24,19 +33,32 @@ def add_item(item: InventoryItem):
     return item
 
 @app.put("/inventory/{product_id}/reduce")
-def reduce_stock(product_id: int, qty: int):
+def reduce_stock(product_id: int, update: StockUpdate):
+    qty = update.qty
     for item in inventory:
         if item.product_id == product_id:
             if item.stock < qty:
                 raise HTTPException(status_code=400, detail="stock not enough")
             item.stock -= qty
-            return {"message": "Stock Updated", "product_id": product_id, "remaining_stock":item.stock}
+            return {
+                "message": "Stock Updated",
+                "product_id": product_id,
+                "remaining_stock": item.stock
+            }
     raise HTTPException(status_code=404, detail="item not found")
 
-@app.put("/inventory/{product_id}/increase")
-def increase_stock(product_id: int, qty: int):
+
+@app.put("/inventory/{product_id}/increase", response_model=dict)
+def increase_stock(product_id: int, update: StockUpdate):
+    qty = update.qty
+
     for item in inventory:
         if item.product_id == product_id:
             item.stock += qty
-            return {"message": "Stock increased", "product_id": product_id, "new_stock": item.stock}
-    raise HTTPException(status_code=404, detail="Item not found")
+            return {
+                "message": "Stock Updated",
+                "product_id": product_id,
+                "new_stock": item.stock
+            }
+
+    raise HTTPException(status_code=404, detail="item not found")
